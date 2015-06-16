@@ -1,54 +1,62 @@
 package java8demo.batch.io;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import org.bson.Document;
 
 public class CSVReader {
-	
-	private static final String SEPARATOR = ";";
-	
-	private final Reader source;
 
-	public CSVReader(Reader source) {
+	private static final String SEPARATOR = ",(?=([^\"]*\"[^\"]*\")*[^\"]*$)";
+
+	private final File source;
+
+	public CSVReader(File source) {
 		super();
 		this.source = source;
 	}
 
-	
-	
-	public List<String> readHeader(){
-		try( BufferedReader reader = new BufferedReader(source)){
-			return reader.lines()
-					.findFirst()
-					.map(line -> Arrays.asList(line.split(SEPARATOR)))
-					.get();
+	public List<String> readHeader() {
+
+		try (FileReader fr = new FileReader(this.source);
+				BufferedReader reader = new BufferedReader(fr)) {
+			return reader.lines().findFirst()
+					.map(line -> Arrays.asList(line.split(SEPARATOR))).get();
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 	}
-	
-	
-	public List<String> readRecords(List<String> headers){
-		try( BufferedReader reader = new BufferedReader(source)){
-			
-			
-			
-			reader.lines()
-					.map(line -> Arrays.asList(line.split(SEPARATOR)))
-					.flatMap(l -> l.stream())
-					.forEach(i ->
-						{System.out.println("Content: " + i);}
-						//headers.parallelStream().forEach(j -> {System.out.println("Content: " + j + i);});
-					 );
-			return null;
+
+	public List<Document> readRecords(List<String> headers) {
+
+		try (FileReader fr = new FileReader(this.source);
+				BufferedReader reader = new BufferedReader(fr)) {
+
+			return reader
+					.lines()
+					.skip(1)
+					.map(line -> {
+						Document document = new Document();
+						List<String> values = Arrays.asList(line
+								.split(SEPARATOR));
+						IntStream.range(0,
+								Math.min(values.size(), headers.size()))
+								.forEach(
+										i -> document.put(headers.get(i),
+												values.get(i)));
+						return document;
+					}).collect(Collectors.toList());
+
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 	}
-	
-	
+
 }
